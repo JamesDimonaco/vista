@@ -31,4 +31,4 @@ export const KM_PER_MILE = 1.60934;
 
 // Weather API
 // Free tier: https://openweathermap.org/api — sign up and paste your key here
-export const OPENWEATHER_API_KEY: string | null = null;
+export const OPENWEATHER_API_KEY: string | null = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY ?? null;
