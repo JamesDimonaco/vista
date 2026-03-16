@@ -1,5 +1,7 @@
 import React from 'react';
-import { Polygon } from 'react-native-maps';
+import { View, StyleSheet } from 'react-native';
+import { Marker, Polygon } from 'react-native-maps';
+import { colors } from '@/constants/Colors';
 
 interface Props {
   latitude: number;
@@ -8,22 +10,17 @@ interface Props {
   available: boolean;
 }
 
-// Draw a cone/wedge showing the user's facing direction
 export function HeadingCone({ latitude, longitude, heading, available }: Props) {
   if (!available) return null;
 
-  // Cone parameters
-  const coneLength = 0.004; // ~400m in degrees — visual only, not to scale
-  const coneSpread = 20; // degrees either side of heading
-
+  // Cone on the map (visible when zoomed in)
+  const coneLength = 0.004;
+  const coneSpread = 20;
   const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  // Calculate cone points
   const leftAngle = toRad(heading - coneSpread);
   const rightAngle = toRad(heading + coneSpread);
 
-  // Points: user position, left edge, right edge
-  const points = [
+  const conePoints = [
     { latitude, longitude },
     {
       latitude: latitude + coneLength * Math.cos(leftAngle),
@@ -36,11 +33,48 @@ export function HeadingCone({ latitude, longitude, heading, available }: Props) 
   ];
 
   return (
-    <Polygon
-      coordinates={points}
-      fillColor="rgba(56, 189, 248, 0.20)"
-      strokeColor="rgba(56, 189, 248, 0.40)"
-      strokeWidth={1}
-    />
+    <>
+      {/* Cone visible when zoomed in */}
+      <Polygon
+        coordinates={conePoints}
+        fillColor="rgba(56, 189, 248, 0.20)"
+        strokeColor="rgba(56, 189, 248, 0.40)"
+        strokeWidth={1}
+      />
+      {/* Arrow marker visible at all zoom levels */}
+      <Marker
+        coordinate={{ latitude, longitude }}
+        anchor={{ x: 0.5, y: 0.5 }}
+        flat
+        tracksViewChanges={false}
+      >
+        <View style={[
+          styles.arrowContainer,
+          { transform: [{ rotate: `${heading}deg` }] },
+        ]}>
+          <View style={styles.arrow} />
+        </View>
+      </Marker>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  arrowContainer: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  arrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 14,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: colors.skyBlue,
+    opacity: 0.9,
+  },
+});
