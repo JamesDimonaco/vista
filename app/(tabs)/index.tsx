@@ -10,10 +10,12 @@ import { useCompass } from '@/hooks/useCompass';
 import { useHorizonDistance } from '@/hooks/useHorizonDistance';
 import { useSettings } from '@/hooks/useSettings';
 import { useVisibility } from '@/hooks/useVisibility';
+import { useLandmarks } from '@/hooks/useLandmarks';
 import { AltitudeStepper } from '@/components/AltitudeStepper';
 import { CompassWidget } from '@/components/CompassWidget';
 import { HorizonCircle } from '@/components/HorizonCircle';
 import { VisibilityCircle } from '@/components/VisibilityCircle';
+import { LandmarkMarkers } from '@/components/LandmarkMarkers';
 import { PermissionGate } from '@/components/PermissionGate';
 
 export default function MapScreen() {
@@ -39,11 +41,18 @@ export default function MapScreen() {
   } | null>(null);
   const [mapRef, setMapRef] = useState<MapView | null>(null);
   const [mapHeading, setMapHeading] = useState(0);
+  const [showLandmarks, setShowLandmarks] = useState(true);
 
   const { visibilityKm } = useVisibility(
     userLocation?.latitude ?? null,
     userLocation?.longitude ?? null,
     OPENWEATHER_API_KEY
+  );
+
+  const { landmarks } = useLandmarks(
+    userLocation?.latitude ?? null,
+    userLocation?.longitude ?? null,
+    horizon.km
   );
 
   // Track map rotation so we know when to show the compass button
@@ -167,6 +176,9 @@ export default function MapScreen() {
             radiusMeters={visibilityMeters}
           />
         )}
+        {showLandmarks && (
+          <LandmarkMarkers landmarks={landmarks} imperial={imperial} />
+        )}
       </MapView>
 
       {/* Top bar overlay */}
@@ -181,11 +193,23 @@ export default function MapScreen() {
             </View>
           )}
         </View>
-        <Pressable style={styles.unitToggle} onPress={toggleUnit}>
-          <Text style={styles.unitToggleText}>
-            {imperial ? 'ft / mi' : 'm / km'}
-          </Text>
-        </Pressable>
+        <View style={styles.topBarRight}>
+          {landmarks.length > 0 && (
+            <Pressable
+              style={[styles.landmarkToggle, !showLandmarks && styles.landmarkToggleOff]}
+              onPress={() => setShowLandmarks((v) => !v)}
+            >
+              <Text style={styles.landmarkToggleText}>
+                ▲ {landmarks.length}
+              </Text>
+            </Pressable>
+          )}
+          <Pressable style={styles.unitToggle} onPress={toggleUnit}>
+            <Text style={styles.unitToggleText}>
+              {imperial ? 'ft / mi' : 'm / km'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Right side buttons */}
@@ -262,6 +286,24 @@ const styles = StyleSheet.create({
   },
   headingText: {
     color: colors.softWhite,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  landmarkToggle: {
+    backgroundColor: colors.deepNavy + 'CC',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  landmarkToggleOff: {
+    opacity: 0.5,
+  },
+  landmarkToggleText: {
+    color: colors.amber,
     fontSize: 14,
     fontWeight: '600',
   },

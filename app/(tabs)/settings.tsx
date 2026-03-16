@@ -95,6 +95,32 @@ export default function SettingsScreen() {
         </Text>
       </View>
 
+      {/* Landmarks */}
+      <Text style={styles.sectionTitle}>Landmarks</Text>
+      <View style={styles.card}>
+        <Text style={styles.explanationText}>
+          Vista shows nearby points of interest within your horizon range,
+          pulled from OpenStreetMap. These include:
+        </Text>
+        <View style={styles.legendRow}>
+          <Text style={[styles.legendIcon, { color: colors.amber }]}>▲</Text>
+          <Text style={styles.legendText}>Mountain peaks (with elevation)</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <Text style={[styles.legendIcon, { color: colors.softWhite }]}>●</Text>
+          <Text style={styles.legendText}>Cities and towns</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <Text style={[styles.legendIcon, { color: colors.skyBlue }]}>◉</Text>
+          <Text style={styles.legendText}>Viewpoints</Text>
+        </View>
+        <Text style={[styles.explanationText, { marginTop: 10 }]}>
+          Tap any landmark on the map to see its name, type, distance from you,
+          and elevation (if available). Use the ▲ button in the top bar to
+          toggle landmarks on or off.
+        </Text>
+      </View>
+
       {/* About */}
       <Text style={styles.sectionTitle}>About</Text>
       <View style={styles.card}>
@@ -225,6 +251,12 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
+  },
+  legendIcon: {
+    fontSize: 14,
+    fontWeight: '700',
+    width: 16,
+    textAlign: 'center',
   },
   legendText: {
     color: colors.softWhite,
