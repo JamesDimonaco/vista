@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import MapView, { Region } from 'react-native-maps';
+import MapView, { Region, Camera } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { colors } from '@/constants/Colors';
 import { DEFAULT_LATITUDE, DEFAULT_LONGITUDE, OPENWEATHER_API_KEY } from '@/utils/constants';
@@ -13,6 +13,7 @@ import { useVisibility } from '@/hooks/useVisibility';
 import { AltitudeStepper } from '@/components/AltitudeStepper';
 import { CompassWidget } from '@/components/CompassWidget';
 import { HorizonCircle } from '@/components/HorizonCircle';
+import { HeadingCone } from '@/components/HeadingCone';
 import { VisibilityCircle } from '@/components/VisibilityCircle';
 import { PermissionGate } from '@/components/PermissionGate';
 
@@ -38,12 +39,22 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [mapRef, setMapRef] = useState<MapView | null>(null);
+  const [mapHeading, setMapHeading] = useState(0);
 
   const { visibilityKm } = useVisibility(
     userLocation?.latitude ?? null,
     userLocation?.longitude ?? null,
     OPENWEATHER_API_KEY
   );
+
+  // Track map rotation so we know when to show the compass button
+  const onRegionChange = useCallback((_region: Region, details: { isGesture?: boolean }) => {
+    if (mapRef) {
+      mapRef.getCamera().then((camera: Camera) => {
+        setMapHeading(camera.heading ?? 0);
+      });
+    }
+  }, [mapRef]);
 
   // Fetch user location for map centering
   useEffect(() => {
@@ -112,7 +123,10 @@ export default function MapScreen() {
     }
   };
 
-  // Visibility circle radius in meters (capped to horizon — can't see further than the curve)
+  // Map is considered "rotated" when heading is more than 5 degrees from north
+  const mapRotated = Math.abs(mapHeading) > 5 && Math.abs(mapHeading - 360) > 5;
+
+  // Visibility circle radius in meters (capped to horizon)
   const visibilityMeters = visibilityKm !== null
     ? Math.min(visibilityKm * 1000, horizon.meters)
     : null;
@@ -126,6 +140,7 @@ export default function MapScreen() {
         showsUserLocation
         showsCompass={false}
         mapPadding={{ top: 0, right: 0, bottom: 180, left: 0 }}
+        onRegionChangeComplete={onRegionChange}
       >
         <HorizonCircle
           latitude={center.latitude}
@@ -139,10 +154,28 @@ export default function MapScreen() {
             radiusMeters={visibilityMeters}
           />
         )}
+        {userLocation && (
+          <HeadingCone
+            latitude={userLocation.latitude}
+            longitude={userLocation.longitude}
+            heading={compass.heading}
+            available={compass.available}
+          />
+        )}
       </MapView>
 
       {/* Top bar overlay */}
       <View style={styles.topBar}>
+        <View style={styles.topBarLeft}>
+          {/* Heading readout */}
+          {compass.available && (
+            <View style={styles.headingPill}>
+              <Text style={styles.headingText}>
+                {Math.round(compass.heading)}°
+              </Text>
+            </View>
+          )}
+        </View>
         <Pressable style={styles.unitToggle} onPress={toggleUnit}>
           <Text style={styles.unitToggleText}>
             {imperial ? 'ft / mi' : 'm / km'}
@@ -150,17 +183,23 @@ export default function MapScreen() {
         </Pressable>
       </View>
 
-      {/* Compass widget */}
-      <View style={styles.compassContainer}>
-        <CompassWidget heading={compass.heading} available={compass.available} onPress={rotateToNorth} />
-      </View>
+      {/* Right side buttons */}
+      <View style={styles.rightButtons}>
+        {/* Compass north button — only shows when map is rotated */}
+        <CompassWidget
+          heading={mapHeading}
+          available={compass.available}
+          mapRotated={mapRotated}
+          onPress={rotateToNorth}
+        />
 
-      {/* Recenter button */}
-      {userLocation && (
-        <Pressable style={styles.recenterButton} onPress={recenter}>
-          <Text style={styles.recenterText}>⌖</Text>
-        </Pressable>
-      )}
+        {/* Recenter button */}
+        {userLocation && (
+          <Pressable style={styles.recenterButton} onPress={recenter}>
+            <Text style={styles.recenterText}>⌖</Text>
+          </Pressable>
+        )}
+      </View>
 
       {/* Bottom sheet */}
       <View style={styles.bottomSheet}>
@@ -203,7 +242,23 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  topBarLeft: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headingPill: {
+    backgroundColor: colors.deepNavy + 'CC',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  headingText: {
+    color: colors.softWhite,
+    fontSize: 14,
+    fontWeight: '600',
   },
   unitToggle: {
     backgroundColor: colors.deepNavy + 'CC',
@@ -216,15 +271,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  compassContainer: {
-    position: 'absolute',
-    right: 16,
-    top: '40%',
-  },
-  recenterButton: {
+  rightButtons: {
     position: 'absolute',
     right: 16,
     bottom: 200,
+    gap: 8,
+    alignItems: 'center',
+  },
+  recenterButton: {
     backgroundColor: colors.deepNavy + 'CC',
     width: 44,
     height: 44,
