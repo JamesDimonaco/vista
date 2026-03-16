@@ -1,20 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors } from '@/constants/Colors';
 import { headingToCardinal } from '@/utils/calculations';
 
 interface Props {
   heading: number;
   available: boolean;
+  onPress?: () => void;
 }
 
-export function CompassWidget({ heading, available }: Props) {
+export function CompassWidget({ heading, available, onPress }: Props) {
   if (!available) return null;
 
   const cardinal = headingToCardinal(heading);
 
   return (
-    <View style={styles.container}>
+    <Pressable style={styles.container} onPress={onPress}>
       <View style={styles.circle}>
         {/* Compass needle */}
         <View
@@ -31,7 +32,7 @@ export function CompassWidget({ heading, available }: Props) {
       <Text style={styles.bearingText}>
         {cardinal} {Math.round(heading)}°
       </Text>
-    </View>
+    </Pressable>
   );
 }
 

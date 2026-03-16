@@ -6,7 +6,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   TextInput,
-  Keyboard,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/Colors';
@@ -50,7 +52,7 @@ export function AltitudeStepper({
   visibilityKm,
 }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editValue, setEditValue] = useState('');
 
   const handlePress = useCallback(
@@ -82,9 +84,9 @@ export function AltitudeStepper({
   const unitLabel = imperial ? 'ft' : 'm';
   const distanceText = formatDistance(horizonKm, imperial);
 
-  const startEditing = () => {
+  const openModal = () => {
     setEditValue(String(displayValue));
-    setEditing(true);
+    setModalVisible(true);
   };
 
   const submitEdit = () => {
@@ -94,103 +96,127 @@ export function AltitudeStepper({
       const clamped = Math.max(ALTITUDE_MIN, Math.min(ALTITUDE_MAX, meters));
       onSetManual(clamped);
     }
-    setEditing(false);
-    Keyboard.dismiss();
+    setModalVisible(false);
   };
 
-  const cancelEdit = () => {
-    setEditing(false);
-    Keyboard.dismiss();
-  };
-
-  // Format visibility for display
   const visibilityText = visibilityKm !== null
     ? formatDistance(visibilityKm, imperial)
     : null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.distanceRow}>
-        <View>
-          <Text style={styles.distanceLabel}>Distance to horizon</Text>
-          {visibilityText && (
-            <Text style={styles.visibilityLabel}>Visibility today</Text>
-          )}
+    <>
+      <View style={styles.container}>
+        <View style={styles.distanceRow}>
+          <View>
+            <Text style={styles.distanceLabel}>Distance to horizon</Text>
+            {visibilityText && (
+              <Text style={styles.visibilityLabel}>Visibility today</Text>
+            )}
+          </View>
+          <View style={styles.distanceValues}>
+            <Text style={styles.distanceValue}>{distanceText}</Text>
+            {visibilityText && (
+              <Text style={styles.visibilityValue}>{visibilityText}</Text>
+            )}
+          </View>
         </View>
-        <View style={styles.distanceValues}>
-          <Text style={styles.distanceValue}>{distanceText}</Text>
-          {visibilityText && (
-            <Text style={styles.visibilityValue}>{visibilityText}</Text>
-          )}
-        </View>
-      </View>
 
-      <View style={styles.stepperRow}>
-        <Pressable
-          style={styles.stepButton}
-          onPress={() => handlePress(onDecrement)}
-          onLongPress={() => startLongPress(onDecrement)}
-          onPressOut={stopLongPress}
-        >
-          <Text style={styles.stepButtonText}>− 10</Text>
-        </Pressable>
-
-        <Pressable style={styles.altitudeDisplay} onPress={startEditing}>
-          {editing ? (
-            <View style={styles.editRow}>
-              <TextInput
-                style={styles.editInput}
-                value={editValue}
-                onChangeText={setEditValue}
-                keyboardType="number-pad"
-                autoFocus
-                selectTextOnFocus
-                onSubmitEditing={submitEdit}
-                onBlur={cancelEdit}
-                returnKeyType="done"
-              />
-              <Text style={styles.altitudeUnit}>{unitLabel}</Text>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.altitudeValue}>{displayValue}</Text>
-              <Text style={styles.altitudeUnit}>{unitLabel}</Text>
-            </>
-          )}
-        </Pressable>
-
-        <Pressable
-          style={styles.stepButton}
-          onPress={() => handlePress(onIncrement)}
-          onLongPress={() => startLongPress(onIncrement)}
-          onPressOut={stopLongPress}
-        >
-          <Text style={styles.stepButtonText}>+ 10</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.bottomRow}>
-        <View style={styles.sensorRow}>
-          {loading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={colors.skyBlue} />
-              <Text style={styles.loadingText}>Detecting altitude...</Text>
-            </View>
-          ) : (
-            <>
-              <SensorDot label="GPS" active={gpsAvailable} />
-              <SensorDot label="Barometer" active={barometerAvailable} />
-              <SensorDot label="Compass" active={compassAvailable} />
-            </>
-          )}
-        </View>
-        {source === 'manual' && gpsAvailable && !loading && (
-          <Pressable style={styles.resetButton} onPress={onResetGps}>
-            <Text style={styles.resetText}>Reset to GPS</Text>
+        <View style={styles.stepperRow}>
+          <Pressable
+            style={styles.stepButton}
+            onPress={() => handlePress(onDecrement)}
+            onLongPress={() => startLongPress(onDecrement)}
+            onPressOut={stopLongPress}
+          >
+            <Text style={styles.stepButtonText}>− 10</Text>
           </Pressable>
-        )}
+
+          <Pressable style={styles.altitudeDisplay} onPress={openModal}>
+            <Text style={styles.altitudeValue}>{displayValue}</Text>
+            <Text style={styles.altitudeUnit}>{unitLabel}</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.stepButton}
+            onPress={() => handlePress(onIncrement)}
+            onLongPress={() => startLongPress(onIncrement)}
+            onPressOut={stopLongPress}
+          >
+            <Text style={styles.stepButtonText}>+ 10</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.bottomRow}>
+          <View style={styles.sensorRow}>
+            {loading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={colors.skyBlue} />
+                <Text style={styles.loadingText}>Detecting altitude...</Text>
+              </View>
+            ) : (
+              <>
+                <SensorDot label="GPS" active={gpsAvailable} />
+                <SensorDot label="Barometer" active={barometerAvailable} />
+                <SensorDot label="Compass" active={compassAvailable} />
+              </>
+            )}
+          </View>
+          {source === 'manual' && gpsAvailable && !loading && (
+            <Pressable style={styles.resetButton} onPress={onResetGps}>
+              <Text style={styles.resetText}>Reset to GPS</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
-    </View>
+
+      {/* Altitude input modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setModalVisible(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalCenter}
+          >
+            <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+              <Text style={styles.modalTitle}>Enter altitude</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={styles.modalInput}
+                  value={editValue}
+                  onChangeText={setEditValue}
+                  keyboardType="number-pad"
+                  autoFocus
+                  selectTextOnFocus
+                  onSubmitEditing={submitEdit}
+                  returnKeyType="done"
+                  placeholder="0"
+                  placeholderTextColor={colors.mutedGrey}
+                />
+                <Text style={styles.modalUnit}>{unitLabel}</Text>
+              </View>
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={styles.modalCancel}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </Pressable>
+                <Pressable style={styles.modalConfirm} onPress={submitEdit}>
+                  <Text style={styles.modalConfirmText}>Set</Text>
+                </Pressable>
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -274,21 +300,6 @@ const styles = StyleSheet.create({
     color: colors.mutedGrey,
     fontSize: 16,
   },
-  editRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-  },
-  editInput: {
-    color: colors.softWhite,
-    fontSize: 32,
-    fontWeight: '700',
-    minWidth: 80,
-    textAlign: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: colors.skyBlue,
-    paddingVertical: 0,
-  },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -337,5 +348,78 @@ const styles = StyleSheet.create({
   sensorLabel: {
     color: colors.mutedGrey,
     fontSize: 12,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCenter: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalCard: {
+    backgroundColor: colors.slate,
+    borderRadius: 16,
+    padding: 24,
+    width: 280,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: colors.softWhite,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 20,
+  },
+  modalInputRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 24,
+  },
+  modalInput: {
+    color: colors.softWhite,
+    fontSize: 40,
+    fontWeight: '700',
+    minWidth: 120,
+    textAlign: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.skyBlue,
+    paddingVertical: 4,
+  },
+  modalUnit: {
+    color: colors.mutedGrey,
+    fontSize: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancel: {
+    flex: 1,
+    backgroundColor: colors.deepNavy,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    color: colors.mutedGrey,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirm: {
+    flex: 1,
+    backgroundColor: colors.skyBlue,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    color: colors.deepNavy,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

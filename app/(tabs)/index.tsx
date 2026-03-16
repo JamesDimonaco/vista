@@ -106,6 +106,12 @@ export default function MapScreen() {
     }
   };
 
+  const rotateToNorth = () => {
+    if (mapRef) {
+      mapRef.animateCamera({ heading: 0 }, { duration: 400 });
+    }
+  };
+
   // Visibility circle radius in meters (capped to horizon — can't see further than the curve)
   const visibilityMeters = visibilityKm !== null
     ? Math.min(visibilityKm * 1000, horizon.meters)
@@ -146,7 +152,7 @@ export default function MapScreen() {
 
       {/* Compass widget */}
       <View style={styles.compassContainer}>
-        <CompassWidget heading={compass.heading} available={compass.available} />
+        <CompassWidget heading={compass.heading} available={compass.available} onPress={rotateToNorth} />
       </View>
 
       {/* Recenter button */}
