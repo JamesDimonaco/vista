@@ -22,8 +22,10 @@ export default function MapScreen() {
     source,
     gpsAvailable,
     barometerAvailable,
+    loading: altitudeLoading,
     increment,
     decrement,
+    resetToGps,
   } = useAltitude(locationGranted);
   const compass = useCompass();
   const horizon = useHorizonDistance(altitude);
@@ -140,8 +142,10 @@ export default function MapScreen() {
           horizonKm={horizon.km}
           imperial={imperial}
           source={source}
+          loading={altitudeLoading}
           onIncrement={increment}
           onDecrement={decrement}
+          onResetGps={resetToGps}
           gpsAvailable={gpsAvailable}
           barometerAvailable={barometerAvailable}
           compassAvailable={compass.available}

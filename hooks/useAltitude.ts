@@ -11,6 +11,7 @@ interface AltitudeState {
   source: AltitudeSource;
   gpsAvailable: boolean;
   barometerAvailable: boolean;
+  loading: boolean;
   increment: () => void;
   decrement: () => void;
   setManual: (meters: number) => void;
@@ -22,6 +23,7 @@ export function useAltitude(locationGranted: boolean | null): AltitudeState {
   const [source, setSource] = useState<AltitudeSource>('manual');
   const [gpsAvailable, setGpsAvailable] = useState(false);
   const [barometerAvailable, setBarometerAvailable] = useState(false);
+  const [loading, setLoading] = useState(true);
   const gpsAltitudeRef = useRef<number>(0);
 
   // Check barometer availability
@@ -59,6 +61,8 @@ export function useAltitude(locationGranted: boolean | null): AltitudeState {
         }
       } catch {
         if (mounted) setGpsAvailable(false);
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
 
@@ -103,6 +107,7 @@ export function useAltitude(locationGranted: boolean | null): AltitudeState {
     source,
     gpsAvailable,
     barometerAvailable,
+    loading,
     increment,
     decrement,
     setManual,

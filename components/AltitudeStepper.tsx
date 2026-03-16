@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/Colors';
 import { formatDistance, getAltitudeDisplayValue } from '@/utils/calculations';
@@ -10,8 +10,10 @@ interface Props {
   horizonKm: number;
   imperial: boolean;
   source: 'gps' | 'barometer' | 'manual';
+  loading: boolean;
   onIncrement: () => void;
   onDecrement: () => void;
+  onResetGps: () => void;
   gpsAvailable: boolean;
   barometerAvailable: boolean;
   compassAvailable: boolean;
@@ -22,8 +24,10 @@ export function AltitudeStepper({
   horizonKm,
   imperial,
   source,
+  loading,
   onIncrement,
   onDecrement,
+  onResetGps,
   gpsAvailable,
   barometerAvailable,
   compassAvailable,
@@ -91,10 +95,26 @@ export function AltitudeStepper({
         </Pressable>
       </View>
 
-      <View style={styles.sensorRow}>
-        <SensorDot label="GPS" active={gpsAvailable} />
-        <SensorDot label="Barometer" active={barometerAvailable} />
-        <SensorDot label="Compass" active={compassAvailable} />
+      <View style={styles.bottomRow}>
+        <View style={styles.sensorRow}>
+          {loading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator size="small" color={colors.skyBlue} />
+              <Text style={styles.loadingText}>Detecting altitude...</Text>
+            </View>
+          ) : (
+            <>
+              <SensorDot label="GPS" active={gpsAvailable} />
+              <SensorDot label="Barometer" active={barometerAvailable} />
+              <SensorDot label="Compass" active={compassAvailable} />
+            </>
+          )}
+        </View>
+        {source === 'manual' && gpsAvailable && !loading && (
+          <Pressable style={styles.resetButton} onPress={onResetGps}>
+            <Text style={styles.resetText}>Reset to GPS</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -166,9 +186,34 @@ const styles = StyleSheet.create({
     color: colors.mutedGrey,
     fontSize: 16,
   },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   sensorRow: {
     flexDirection: 'row',
     gap: 16,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    color: colors.skyBlue,
+    fontSize: 12,
+  },
+  resetButton: {
+    backgroundColor: colors.slate,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  resetText: {
+    color: colors.skyBlue,
+    fontSize: 12,
+    fontWeight: '600',
   },
   sensorItem: {
     flexDirection: 'row',
