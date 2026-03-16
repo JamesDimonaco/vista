@@ -28,3 +28,7 @@ export const MAP_CIRCLE_STROKE_WIDTH = 2;
 // Units
 export const METERS_PER_FOOT = 0.3048;
 export const KM_PER_MILE = 1.60934;
+
+// Weather API
+// Free tier: https://openweathermap.org/api — sign up and paste your key here
+export const OPENWEATHER_API_KEY: string | null = null;

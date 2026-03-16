@@ -3,15 +3,17 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-nati
 import MapView, { Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { colors } from '@/constants/Colors';
-import { DEFAULT_LATITUDE, DEFAULT_LONGITUDE } from '@/utils/constants';
+import { DEFAULT_LATITUDE, DEFAULT_LONGITUDE, OPENWEATHER_API_KEY } from '@/utils/constants';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAltitude } from '@/hooks/useAltitude';
 import { useCompass } from '@/hooks/useCompass';
 import { useHorizonDistance } from '@/hooks/useHorizonDistance';
 import { useSettings } from '@/hooks/useSettings';
+import { useVisibility } from '@/hooks/useVisibility';
 import { AltitudeStepper } from '@/components/AltitudeStepper';
 import { CompassWidget } from '@/components/CompassWidget';
 import { HorizonCircle } from '@/components/HorizonCircle';
+import { VisibilityCircle } from '@/components/VisibilityCircle';
 import { PermissionGate } from '@/components/PermissionGate';
 
 export default function MapScreen() {
@@ -26,6 +28,7 @@ export default function MapScreen() {
     increment,
     decrement,
     resetToGps,
+    setManual,
   } = useAltitude(locationGranted);
   const compass = useCompass();
   const horizon = useHorizonDistance(altitude);
@@ -35,6 +38,12 @@ export default function MapScreen() {
     longitude: number;
   } | null>(null);
   const [mapRef, setMapRef] = useState<MapView | null>(null);
+
+  const { visibilityKm } = useVisibility(
+    userLocation?.latitude ?? null,
+    userLocation?.longitude ?? null,
+    OPENWEATHER_API_KEY
+  );
 
   // Fetch user location for map centering
   useEffect(() => {
@@ -97,6 +106,11 @@ export default function MapScreen() {
     }
   };
 
+  // Visibility circle radius in meters (capped to horizon — can't see further than the curve)
+  const visibilityMeters = visibilityKm !== null
+    ? Math.min(visibilityKm * 1000, horizon.meters)
+    : null;
+
   return (
     <View style={styles.container}>
       <MapView
@@ -112,6 +126,13 @@ export default function MapScreen() {
           longitude={center.longitude}
           radiusMeters={horizon.meters}
         />
+        {visibilityMeters !== null && visibilityMeters < horizon.meters && (
+          <VisibilityCircle
+            latitude={center.latitude}
+            longitude={center.longitude}
+            radiusMeters={visibilityMeters}
+          />
+        )}
       </MapView>
 
       {/* Top bar overlay */}
@@ -146,9 +167,11 @@ export default function MapScreen() {
           onIncrement={increment}
           onDecrement={decrement}
           onResetGps={resetToGps}
+          onSetManual={setManual}
           gpsAvailable={gpsAvailable}
           barometerAvailable={barometerAvailable}
           compassAvailable={compass.available}
+          visibilityKm={visibilityKm}
         />
       </View>
     </View>

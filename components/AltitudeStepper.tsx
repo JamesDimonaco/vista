@@ -1,9 +1,22 @@
-import React, { useRef, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useRef, useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  TextInput,
+  Keyboard,
+} from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '@/constants/Colors';
-import { formatDistance, getAltitudeDisplayValue } from '@/utils/calculations';
-import { LONG_PRESS_INTERVAL_MS } from '@/utils/constants';
+import {
+  formatDistance,
+  getAltitudeDisplayValue,
+  displayValueToMeters,
+  roundToStep,
+} from '@/utils/calculations';
+import { LONG_PRESS_INTERVAL_MS, ALTITUDE_MIN, ALTITUDE_MAX } from '@/utils/constants';
 
 interface Props {
   altitude: number; // meters
@@ -14,9 +27,11 @@ interface Props {
   onIncrement: () => void;
   onDecrement: () => void;
   onResetGps: () => void;
+  onSetManual: (meters: number) => void;
   gpsAvailable: boolean;
   barometerAvailable: boolean;
   compassAvailable: boolean;
+  visibilityKm: number | null;
 }
 
 export function AltitudeStepper({
@@ -28,11 +43,15 @@ export function AltitudeStepper({
   onIncrement,
   onDecrement,
   onResetGps,
+  onSetManual,
   gpsAvailable,
   barometerAvailable,
   compassAvailable,
+  visibilityKm,
 }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
 
   const handlePress = useCallback(
     (action: () => void) => {
@@ -63,11 +82,47 @@ export function AltitudeStepper({
   const unitLabel = imperial ? 'ft' : 'm';
   const distanceText = formatDistance(horizonKm, imperial);
 
+  const startEditing = () => {
+    setEditValue(String(displayValue));
+    setEditing(true);
+  };
+
+  const submitEdit = () => {
+    const parsed = parseInt(editValue, 10);
+    if (!isNaN(parsed) && parsed >= 0) {
+      const meters = displayValueToMeters(roundToStep(parsed), imperial);
+      const clamped = Math.max(ALTITUDE_MIN, Math.min(ALTITUDE_MAX, meters));
+      onSetManual(clamped);
+    }
+    setEditing(false);
+    Keyboard.dismiss();
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    Keyboard.dismiss();
+  };
+
+  // Format visibility for display
+  const visibilityText = visibilityKm !== null
+    ? formatDistance(visibilityKm, imperial)
+    : null;
+
   return (
     <View style={styles.container}>
       <View style={styles.distanceRow}>
-        <Text style={styles.distanceLabel}>Distance to horizon</Text>
-        <Text style={styles.distanceValue}>{distanceText}</Text>
+        <View>
+          <Text style={styles.distanceLabel}>Distance to horizon</Text>
+          {visibilityText && (
+            <Text style={styles.visibilityLabel}>Visibility today</Text>
+          )}
+        </View>
+        <View style={styles.distanceValues}>
+          <Text style={styles.distanceValue}>{distanceText}</Text>
+          {visibilityText && (
+            <Text style={styles.visibilityValue}>{visibilityText}</Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.stepperRow}>
@@ -80,10 +135,29 @@ export function AltitudeStepper({
           <Text style={styles.stepButtonText}>− 10</Text>
         </Pressable>
 
-        <View style={styles.altitudeDisplay}>
-          <Text style={styles.altitudeValue}>{displayValue}</Text>
-          <Text style={styles.altitudeUnit}>{unitLabel}</Text>
-        </View>
+        <Pressable style={styles.altitudeDisplay} onPress={startEditing}>
+          {editing ? (
+            <View style={styles.editRow}>
+              <TextInput
+                style={styles.editInput}
+                value={editValue}
+                onChangeText={setEditValue}
+                keyboardType="number-pad"
+                autoFocus
+                selectTextOnFocus
+                onSubmitEditing={submitEdit}
+                onBlur={cancelEdit}
+                returnKeyType="done"
+              />
+              <Text style={styles.altitudeUnit}>{unitLabel}</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.altitudeValue}>{displayValue}</Text>
+              <Text style={styles.altitudeUnit}>{unitLabel}</Text>
+            </>
+          )}
+        </Pressable>
 
         <Pressable
           style={styles.stepButton}
@@ -141,17 +215,31 @@ const styles = StyleSheet.create({
   distanceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
     marginBottom: 16,
   },
   distanceLabel: {
     color: colors.mutedGrey,
     fontSize: 14,
   },
+  distanceValues: {
+    alignItems: 'flex-end',
+  },
   distanceValue: {
     color: colors.skyBlue,
     fontSize: 20,
     fontWeight: '600',
+  },
+  visibilityLabel: {
+    color: colors.mutedGrey,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  visibilityValue: {
+    color: colors.amber,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 2,
   },
   stepperRow: {
     flexDirection: 'row',
@@ -185,6 +273,21 @@ const styles = StyleSheet.create({
   altitudeUnit: {
     color: colors.mutedGrey,
     fontSize: 16,
+  },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  editInput: {
+    color: colors.softWhite,
+    fontSize: 32,
+    fontWeight: '700',
+    minWidth: 80,
+    textAlign: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: colors.skyBlue,
+    paddingVertical: 0,
   },
   bottomRow: {
     flexDirection: 'row',
