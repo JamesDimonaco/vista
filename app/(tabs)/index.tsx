@@ -13,7 +13,6 @@ import { useVisibility } from '@/hooks/useVisibility';
 import { AltitudeStepper } from '@/components/AltitudeStepper';
 import { CompassWidget } from '@/components/CompassWidget';
 import { HorizonCircle } from '@/components/HorizonCircle';
-import { HeadingCone } from '@/components/HeadingCone';
 import { VisibilityCircle } from '@/components/VisibilityCircle';
 import { PermissionGate } from '@/components/PermissionGate';
 
@@ -68,6 +67,20 @@ export default function MapScreen() {
         longitude: loc.coords.longitude,
       });
     }).catch(() => {});
+  }, [locationGranted]);
+
+  // Start heading updates — this triggers the native blue dot heading beam on iOS
+  useEffect(() => {
+    if (!locationGranted) return;
+
+    let sub: Location.LocationSubscription | null = null;
+
+    Location.watchHeadingAsync((heading) => {
+      // We don't need the value here — just having an active heading
+      // subscription makes iOS show the native heading beam on the blue dot
+    }).then((s) => { sub = s; });
+
+    return () => { sub?.remove(); };
   }, [locationGranted]);
 
   // Show permission gate on first launch
@@ -152,14 +165,6 @@ export default function MapScreen() {
             latitude={center.latitude}
             longitude={center.longitude}
             radiusMeters={visibilityMeters}
-          />
-        )}
-        {userLocation && (
-          <HeadingCone
-            latitude={userLocation.latitude}
-            longitude={userLocation.longitude}
-            heading={compass.heading}
-            available={compass.available}
           />
         )}
       </MapView>
