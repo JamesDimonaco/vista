@@ -65,6 +65,36 @@ export default function SettingsScreen() {
         </Text>
       </View>
 
+      {/* Visibility */}
+      <Text style={styles.sectionTitle}>Visibility today</Text>
+      <View style={styles.card}>
+        <Text style={styles.explanationText}>
+          The blue circle on the map shows how far you could see on a perfectly
+          clear day — based purely on your altitude and the curvature of the Earth.
+        </Text>
+        <Text style={[styles.explanationText, { marginTop: 10 }]}>
+          The amber circle shows how far you can actually see right now, based on
+          current weather conditions at your location. Fog, rain, haze, and
+          humidity all reduce visibility.
+        </Text>
+        <View style={styles.legendRow}>
+          <View style={[styles.legendDot, { backgroundColor: colors.skyBlue }]} />
+          <Text style={styles.legendText}>Theoretical maximum (clear sky)</Text>
+        </View>
+        <View style={styles.legendRow}>
+          <View style={[styles.legendDot, { backgroundColor: colors.amber }]} />
+          <Text style={styles.legendText}>Actual visibility (current weather)</Text>
+        </View>
+        <Text style={[styles.explanationText, { marginTop: 10 }]}>
+          When both circles are shown, the area between them represents what you
+          could see on a clearer day but can't see right now.
+        </Text>
+        <Text style={[styles.explanationText, { marginTop: 10 }]}>
+          If the amber circle isn't shown, either the weather is clear enough that
+          visibility isn't limiting you, or weather data isn't available.
+        </Text>
+      </View>
+
       {/* About */}
       <Text style={styles.sectionTitle}>About</Text>
       <View style={styles.card}>
@@ -184,6 +214,21 @@ const styles = StyleSheet.create({
     color: colors.mutedGrey,
     fontSize: 14,
     lineHeight: 20,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  legendDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  legendText: {
+    color: colors.softWhite,
+    fontSize: 14,
   },
   formulaText: {
     color: colors.skyBlue,

@@ -110,7 +110,10 @@ export function AltitudeStepper({
           <View>
             <Text style={styles.distanceLabel}>Distance to horizon</Text>
             {visibilityText && (
-              <Text style={styles.visibilityLabel}>Visibility today</Text>
+              <Text style={styles.visibilityLabel}>
+                Visibility today{' '}
+                <Text style={styles.visibilityHint}>(weather)</Text>
+              </Text>
             )}
           </View>
           <View style={styles.distanceValues}>
@@ -260,6 +263,11 @@ const styles = StyleSheet.create({
     color: colors.mutedGrey,
     fontSize: 12,
     marginTop: 2,
+  },
+  visibilityHint: {
+    color: colors.mutedGrey,
+    fontSize: 10,
+    fontWeight: '400',
   },
   visibilityValue: {
     color: colors.amber,
